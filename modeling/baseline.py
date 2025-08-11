@@ -10,6 +10,7 @@ from torch import nn
 from .backbones.resnet import ResNet, BasicBlock, Bottleneck
 from .backbones.senet import SENet, SEResNetBottleneck, SEBottleneck, SEResNeXtBottleneck
 from .backbones.resnet_ibn_a import resnet50_ibn_a
+from modeling.backbones.resnet import ResNet, Bottleneck
 
 
 def weights_init_kaiming(m):
@@ -38,30 +39,45 @@ def weights_init_classifier(m):
 class Baseline(nn.Module):
     in_planes = 2048
 
-    def __init__(self, num_classes, last_stride, model_path, neck, neck_feat, model_name, pretrain_choice):
+    def __init__(self, num_classes, last_stride, model_path, neck, neck_feat, model_name, pretrain_choice, use_sa_l3=False, use_sa_l4=False, use_sg_l3=False, use_sg_l4=False):
         super(Baseline, self).__init__()
         if model_name == 'resnet18':
-            self.in_planes = 512
-            self.base = ResNet(last_stride=last_stride, 
-                               block=BasicBlock, 
-                               layers=[2, 2, 2, 2])
+        self.in_planes = 512
+        self.base = ResNet(
+            last_stride=last_stride, block=BasicBlock, layers=[2, 2, 2, 2],
+            use_sa_l3=use_sa_l3, use_sa_l4=use_sa_l4,
+            use_sg_l3=use_sg_l3, use_sg_l4=use_sg_l4
+        )
+
         elif model_name == 'resnet34':
             self.in_planes = 512
-            self.base = ResNet(last_stride=last_stride,
-                               block=BasicBlock,
-                               layers=[3, 4, 6, 3])
+            self.base = ResNet(
+                last_stride=last_stride, block=BasicBlock, layers=[3, 4, 6, 3],
+                use_sa_l3=use_sa_l3, use_sa_l4=use_sa_l4,
+                use_sg_l3=use_sg_l3, use_sg_l4=use_sg_l4
+            )
+        
         elif model_name == 'resnet50':
-            self.base = ResNet(last_stride=last_stride,
-                               block=Bottleneck,
-                               layers=[3, 4, 6, 3])
+            self.base = ResNet(
+                last_stride=last_stride, block=Bottleneck, layers=[3, 4, 6, 3],
+                use_sa_l3=use_sa_l3, use_sa_l4=use_sa_l4,
+                use_sg_l3=use_sg_l3, use_sg_l4=use_sg_l4
+            )
+        
         elif model_name == 'resnet101':
-            self.base = ResNet(last_stride=last_stride,
-                               block=Bottleneck, 
-                               layers=[3, 4, 23, 3])
+            self.base = ResNet(
+                last_stride=last_stride, block=Bottleneck, layers=[3, 4, 23, 3],
+                use_sa_l3=use_sa_l3, use_sa_l4=use_sa_l4,
+                use_sg_l3=use_sg_l3, use_sg_l4=use_sg_l4
+            )
+        
         elif model_name == 'resnet152':
-            self.base = ResNet(last_stride=last_stride, 
-                               block=Bottleneck,
-                               layers=[3, 8, 36, 3])
+            self.base = ResNet(
+                last_stride=last_stride, block=Bottleneck, layers=[3, 8, 36, 3],
+                use_sa_l3=use_sa_l3, use_sa_l4=use_sa_l4,
+                use_sg_l3=use_sg_l3, use_sg_l4=use_sg_l4
+            )
+
             
         elif model_name == 'se_resnet50':
             self.base = SENet(block=SEResNetBottleneck, 
