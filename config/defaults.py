@@ -18,6 +18,7 @@ _C = CN()
 
 _C.MODEL.SGCONV = 'none'  # 'none' | 'layer3' | 'layer4' | 'both'
 _C.SOLVER.EARLY_STOP_PATIENCE = 0  # 0 = disabled
+_C.MODEL.SELF_ATT N = 'none' 
 
 _C.MODEL = CN()
 # Using cuda or cpu for training
