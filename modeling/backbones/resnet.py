@@ -91,67 +91,83 @@ class Bottleneck(nn.Module):
         return out
 
 
+import math
+import torch
+import torch.nn as nn
+# make sure these are imported from your files
+from layers.self_attention import SelfAttention2d
+from layers.sgconv import SGConv2D
+
 class ResNet(nn.Module):
-    def __init__(self, last_stride=2, block=Bottleneck, layers=[3, 4, 6, 3]):
-        self.inplanes = 64
+    def __init__(self, last_stride=2, block=Bottleneck, layers=[3, 4, 6, 3], **kwargs):
         super().__init__()
-        self.conv1 = nn.Conv2d(3, 64, kernel_size=7, stride=2, padding=3,
-                               bias=False)
-        self.bn1 = nn.BatchNorm2d(64)
-        # self.relu = nn.ReLU(inplace=True)   # add missed relu
+        self.inplanes = 64
+
+        # === flags ===
+        self.use_sa_l3 = kwargs.get("use_sa_l3", False)
+        self.use_sg_l3 = kwargs.get("use_sg_l3", False)
+        self.use_sa_l4 = kwargs.get("use_sa_l4", False)
+        self.use_sg_l4 = kwargs.get("use_sg_l4", False)
+
+        # stem
+        self.conv1 = nn.Conv2d(3, 64, kernel_size=7, stride=2, padding=3, bias=False)
+        self.bn1   = nn.BatchNorm2d(64)
+        self.relu  = nn.ReLU(inplace=True)          # <- keep this
         self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
-        self.layer1 = self._make_layer(block, 64, layers[0])
+
+        # body
+        self.layer1 = self._make_layer(block, 64,  layers[0])
         self.layer2 = self._make_layer(block, 128, layers[1], stride=2)
         self.layer3 = self._make_layer(block, 256, layers[2], stride=2)
-        # inside the ResNet class __init__
-        self.sa3 = SelfAttention2d(1024)   # layer3 output channels in ResNet50
-        self.sg3 = SGConv2D(1024, 1024)   # after layer3 (ResNet-50: 1024 channels)
 
+        # attention/graph blocks (Identity when disabled)
+        self.sa3 = SelfAttention2d(1024) if self.use_sa_l3 else nn.Identity()
+        self.sg3 = SGConv2D(1024, 1024)  if self.use_sg_l3 else nn.Identity()
 
-        self.sa4 = SelfAttention2d(2048)   # optional, after layer4
+        self.layer4 = self._make_layer(block, 512, layers[3], stride=last_stride)
 
-        self.layer4 = self._make_layer(
-            block, 512, layers[3], stride=last_stride)
+        self.sa4 = SelfAttention2d(2048) if self.use_sa_l4 else nn.Identity()
+        self.sg4 = SGConv2D(2048, 2048)  if self.use_sg_l4 else nn.Identity()
 
     def _make_layer(self, block, planes, blocks, stride=1):
         downsample = None
         if stride != 1 or self.inplanes != planes * block.expansion:
             downsample = nn.Sequential(
-                nn.Conv2d(self.inplanes, planes * block.expansion,
-                          kernel_size=1, stride=stride, bias=False),
+                nn.Conv2d(self.inplanes, planes * block.expansion, kernel_size=1, stride=stride, bias=False),
                 nn.BatchNorm2d(planes * block.expansion),
             )
 
-        layers = []
-        layers.append(block(self.inplanes, planes, stride, downsample))
+        layers = [block(self.inplanes, planes, stride, downsample)]
         self.inplanes = planes * block.expansion
-        for i in range(1, blocks):
+        for _ in range(1, blocks):
             layers.append(block(self.inplanes, planes))
-
         return nn.Sequential(*layers)
 
     def forward(self, x):
+        # stem
         x = self.conv1(x)
         x = self.bn1(x)
-        # x = self.relu(x)    # add missed relu
+        x = self.relu(x)          # <- DO NOT comment this out
         x = self.maxpool(x)
 
+        # body + optional blocks
         x = self.layer1(x)
         x = self.layer2(x)
         x = self.layer3(x)
-        x = self.sa3(x)
-        x = self.sg3(x) 
+        x = self.sa3(x)           # active only if flag enabled (else Identity)
+        x = self.sg3(x)           # active only if flag enabled (else Identity)
         x = self.layer4(x)
-        x = self.sa4(x) 
-
+        x = self.sa4(x)
+        x = self.sg4(x)
         return x
 
     def load_param(self, model_path):
-        param_dict = torch.load(model_path)
-        for i in param_dict:
-            if 'fc' in i:
+        param_dict = torch.load(model_path, map_location='cpu')
+        for k, v in param_dict.items():
+            if k.startswith('fc.'):
                 continue
-            self.state_dict()[i].copy_(param_dict[i])
+            if k in self.state_dict():
+                self.state_dict()[k].copy_(v)
 
     def random_init(self):
         for m in self.modules():
@@ -161,4 +177,5 @@ class ResNet(nn.Module):
             elif isinstance(m, nn.BatchNorm2d):
                 m.weight.data.fill_(1)
                 m.bias.data.zero_()
+
 
