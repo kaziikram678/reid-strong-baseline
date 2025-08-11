@@ -6,6 +6,8 @@
 
 import math
 from layers.self_attention import SelfAttention2d
+from layers.sgconv import SGConv2D
+
 
 
 import torch
@@ -103,6 +105,9 @@ class ResNet(nn.Module):
         self.layer3 = self._make_layer(block, 256, layers[2], stride=2)
         # inside the ResNet class __init__
         self.sa3 = SelfAttention2d(1024)   # layer3 output channels in ResNet50
+        self.sg3 = SGConv2D(1024, 1024)   # after layer3 (ResNet-50: 1024 channels)
+
+
         self.sa4 = SelfAttention2d(2048)   # optional, after layer4
 
         self.layer4 = self._make_layer(
@@ -135,6 +140,7 @@ class ResNet(nn.Module):
         x = self.layer2(x)
         x = self.layer3(x)
         x = self.sa3(x)
+        x = self.sg3(x) 
         x = self.layer4(x)
         x = self.sa4(x) 
 
