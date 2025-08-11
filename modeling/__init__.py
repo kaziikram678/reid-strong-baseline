@@ -1,12 +1,14 @@
 from .baseline import Baseline
 
 def build_model(cfg, num_classes):
-    use_sa_l3 = cfg.MODEL.SELF_ATTN in ('layer3', 'both')
-    use_sa_l4 = cfg.MODEL.SELF_ATTN in ('layer4', 'both')
-    use_sg_l3 = cfg.MODEL.SGCONV   in ('layer3', 'both')
-    use_sg_l4 = cfg.MODEL.SGCONV   in ('layer4', 'both')
+    sa = cfg.MODEL.SELF_ATTN.lower()
+    sg = cfg.MODEL.SGCONV.lower()
+    use_sa_l3 = sa in ('layer3', 'both')
+    use_sa_l4 = sa in ('layer4', 'both')
+    use_sg_l3 = sg in ('layer3', 'both')
+    use_sg_l4 = sg in ('layer4', 'both')
 
-    model = Baseline(
+    return Baseline(
         num_classes,
         last_stride=cfg.MODEL.LAST_STRIDE,
         model_path=cfg.MODEL.PRETRAIN_PATH,
@@ -17,4 +19,3 @@ def build_model(cfg, num_classes):
         use_sa_l3=use_sa_l3, use_sa_l4=use_sa_l4,
         use_sg_l3=use_sg_l3, use_sg_l4=use_sg_l4,
     )
-    return model
