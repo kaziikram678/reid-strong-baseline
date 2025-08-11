@@ -13,6 +13,7 @@ from ignite.handlers import ModelCheckpoint, Timer
 from ignite.metrics import RunningAverage
 
 from utils.reid_metric import R1_mAP
+from ignite.handlers import EarlyStopping
 
 global ITER
 ITER = 0
@@ -111,7 +112,21 @@ def do_train(
     logger = logging.getLogger("reid_baseline.train")
     logger.info("Start training")
     trainer = create_supervised_trainer(model, optimizer, loss_fn, device=device)
-    evaluator = create_supervised_evaluator(model, metrics={'r1_mAP': R1_mAP(num_query, max_rank=50, feat_norm=cfg.TEST.FEAT_NORM)}, device=device)
+    evaluator = create_supervised_evaluator(
+    model, metrics={'r1_mAP': R1_mAP(num_query, max_rank=50, feat_norm=cfg.TEST.FEAT_NORM)},
+    device=device)
+
+    # === ADD EARLY STOPPING HERE ===
+    patience = getattr(cfg.SOLVER, "EARLY_STOP_PATIENCE", 0)
+    if patience and patience > 0:
+        def score_fn(engine):
+            cmc, mAP = engine.state.metrics['r1_mAP']
+            return mAP  # maximize
+        es_handler = EarlyStopping(patience=patience, score_function=score_fn, trainer=trainer)
+        evaluator.add_event_handler(Events.COMPLETED, es_handler)
+    # ===============================
+
+    
 
     # Use keyword args: set save_interval to checkpoint_period so the handler doesn't treat it as a score_function
     checkpointer = ModelCheckpoint(dirname=output_dir,
@@ -196,7 +211,19 @@ def do_train_with_center(
     logger = logging.getLogger("reid_baseline.train")
     logger.info("Start training")
     trainer = create_supervised_trainer_with_center(model, center_criterion, optimizer, optimizer_center, loss_fn, cfg.SOLVER.CENTER_LOSS_WEIGHT, device=device)
-    evaluator = create_supervised_evaluator(model, metrics={'r1_mAP': R1_mAP(num_query, max_rank=50, feat_norm=cfg.TEST.FEAT_NORM)}, device=device)
+    evaluator = create_supervised_evaluator(
+    model, metrics={'r1_mAP': R1_mAP(num_query, max_rank=50, feat_norm=cfg.TEST.FEAT_NORM)},
+    device=device)
+
+    # === ADD EARLY STOPPING HERE ===
+    patience = getattr(cfg.SOLVER, "EARLY_STOP_PATIENCE", 0)
+    if patience and patience > 0:
+        def score_fn(engine):
+            cmc, mAP = engine.state.metrics['r1_mAP']
+            return mAP  # maximize
+        es_handler = EarlyStopping(patience=patience, score_function=score_fn, trainer=trainer)
+        evaluator.add_event_handler(Events.COMPLETED, es_handler)
+    # ===============================
 
     checkpointer = ModelCheckpoint(dirname=output_dir,
                                filename_prefix=cfg.MODEL.NAME,
