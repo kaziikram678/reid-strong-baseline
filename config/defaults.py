@@ -16,9 +16,12 @@ from yacs.config import CfgNode as CN
 
 _C = CN()
 
-_C.MODEL.SGCONV = 'none'  # 'none' | 'layer3' | 'layer4' | 'both'
-_C.SOLVER.EARLY_STOP_PATIENCE = 0  # 0 = disabled
-_C.MODEL.SELF_ATT N = 'none' 
+# after _C.MODEL is defined
+_C.MODEL.SELF_ATTN = 'none'   # 'none' | 'layer3' | 'layer4' | 'both'
+_C.MODEL.SGCONV    = 'none'   # 'none' | 'layer3' | 'layer4' | 'both'
+
+# optional early stop (put under SOLVER)
+_C.SOLVER.EARLY_STOP_PATIENCE = 0
 
 _C.MODEL = CN()
 # Using cuda or cpu for training
