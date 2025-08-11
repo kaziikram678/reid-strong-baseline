@@ -115,15 +115,16 @@ def do_train(
 
     # Use keyword args: set save_interval to checkpoint_period so the handler doesn't treat it as a score_function
     checkpointer = ModelCheckpoint(dirname=output_dir,
-                                   filename_prefix=cfg.MODEL.NAME,
-                                   n_saved=10,
-                                   require_empty=False,
-                                   save_interval=checkpoint_period)
+                               filename_prefix=cfg.MODEL.NAME,
+                               n_saved=10,
+                               require_empty=False,
+                               atomic=True)
 
     timer = Timer(average=True)
 
-    trainer.add_event_handler(Events.EPOCH_COMPLETED, checkpointer, {'model': model,
-                                                                     'optimizer': optimizer})
+    trainer.add_event_handler(Events.EPOCH_COMPLETED(every=checkpoint_period),
+                          checkpointer,
+                          {'model': model, 'optimizer': optimizer})
     timer.attach(trainer, start=Events.EPOCH_STARTED, resume=Events.ITERATION_STARTED,
                  pause=Events.ITERATION_COMPLETED, step=Events.ITERATION_COMPLETED)
 
@@ -198,17 +199,19 @@ def do_train_with_center(
     evaluator = create_supervised_evaluator(model, metrics={'r1_mAP': R1_mAP(num_query, max_rank=50, feat_norm=cfg.TEST.FEAT_NORM)}, device=device)
 
     checkpointer = ModelCheckpoint(dirname=output_dir,
-                                   filename_prefix=cfg.MODEL.NAME,
-                                   n_saved=10,
-                                   require_empty=False,
-                                   save_interval=checkpoint_period)
+                               filename_prefix=cfg.MODEL.NAME,
+                               n_saved=10,
+                               require_empty=False,
+                               atomic=True)
 
     timer = Timer(average=True)
 
-    trainer.add_event_handler(Events.EPOCH_COMPLETED, checkpointer, {'model': model,
-                                                                     'optimizer': optimizer,
-                                                                     'center_param': center_criterion,
-                                                                     'optimizer_center': optimizer_center})
+    trainer.add_event_handler(Events.EPOCH_COMPLETED(every=checkpoint_period),
+                          checkpointer,
+                          {'model': model,
+                           'optimizer': optimizer,
+                           'center_param': center_criterion,
+                           'optimizer_center': optimizer_center})
 
     timer.attach(trainer, start=Events.EPOCH_STARTED, resume=Events.ITERATION_STARTED,
                  pause=Events.ITERATION_COMPLETED, step=Events.ITERATION_COMPLETED)
