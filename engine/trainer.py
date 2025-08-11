@@ -19,19 +19,6 @@ ITER = 0
 
 def create_supervised_trainer(model, optimizer, loss_fn,
                               device=None):
-    """
-    Factory function for creating a trainer for supervised models
-
-    Args:
-        model (`torch.nn.Module`): the model to train
-        optimizer (`torch.optim.Optimizer`): the optimizer to use
-        loss_fn (torch.nn loss function): the loss function to use
-        device (str, optional): device type specification (default: None).
-            Applies to both model and batches.
-
-    Returns:
-        Engine: a trainer engine with supervised update function
-    """
     if device:
         if torch.cuda.device_count() > 1:
             model = nn.DataParallel(model)
@@ -47,7 +34,6 @@ def create_supervised_trainer(model, optimizer, loss_fn,
         loss = loss_fn(score, feat, target)
         loss.backward()
         optimizer.step()
-        # compute acc
         acc = (score.max(1)[1] == target).float().mean()
         return loss.item(), acc.item()
 
@@ -56,19 +42,6 @@ def create_supervised_trainer(model, optimizer, loss_fn,
 
 def create_supervised_trainer_with_center(model, center_criterion, optimizer, optimizer_center, loss_fn, cetner_loss_weight,
                               device=None):
-    """
-    Factory function for creating a trainer for supervised models
-
-    Args:
-        model (`torch.nn.Module`): the model to train
-        optimizer (`torch.optim.Optimizer`): the optimizer to use
-        loss_fn (torch.nn loss function): the loss function to use
-        device (str, optional): device type specification (default: None).
-            Applies to both model and batches.
-
-    Returns:
-        Engine: a trainer engine with supervised update function
-    """
     if device:
         if torch.cuda.device_count() > 1:
             model = nn.DataParallel(model)
@@ -83,14 +56,11 @@ def create_supervised_trainer_with_center(model, center_criterion, optimizer, op
         target = target.to(device) if torch.cuda.device_count() >= 1 else target
         score, feat = model(img)
         loss = loss_fn(score, feat, target)
-        # print("Total loss is {}, center loss is {}".format(loss, center_criterion(feat, target)))
         loss.backward()
         optimizer.step()
         for param in center_criterion.parameters():
             param.grad.data *= (1. / cetner_loss_weight)
         optimizer_center.step()
-
-        # compute acc
         acc = (score.max(1)[1] == target).float().mean()
         return loss.item(), acc.item()
 
@@ -99,17 +69,6 @@ def create_supervised_trainer_with_center(model, center_criterion, optimizer, op
 
 def create_supervised_evaluator(model, metrics,
                                 device=None):
-    """
-    Factory function for creating an evaluator for supervised models
-
-    Args:
-        model (`torch.nn.Module`): the model to train
-        metrics (dict of str - :class:`ignite.metrics.Metric`): a map of metric names to Metrics
-        device (str, optional): device type specification (default: None).
-            Applies to both model and batches.
-    Returns:
-        Engine: an evaluator engine with supervised inference function
-    """
     if device:
         if torch.cuda.device_count() > 1:
             model = nn.DataParallel(model)
@@ -153,7 +112,14 @@ def do_train(
     logger.info("Start training")
     trainer = create_supervised_trainer(model, optimizer, loss_fn, device=device)
     evaluator = create_supervised_evaluator(model, metrics={'r1_mAP': R1_mAP(num_query, max_rank=50, feat_norm=cfg.TEST.FEAT_NORM)}, device=device)
-    checkpointer = ModelCheckpoint(output_dir, cfg.MODEL.NAME, checkpoint_period, n_saved=10, require_empty=False)
+
+    # Use keyword args: set save_interval to checkpoint_period so the handler doesn't treat it as a score_function
+    checkpointer = ModelCheckpoint(dirname=output_dir,
+                                   filename_prefix=cfg.MODEL.NAME,
+                                   n_saved=10,
+                                   require_empty=False,
+                                   save_interval=checkpoint_period)
+
     timer = Timer(average=True)
 
     trainer.add_event_handler(Events.EPOCH_COMPLETED, checkpointer, {'model': model,
@@ -161,7 +127,6 @@ def do_train(
     timer.attach(trainer, start=Events.EPOCH_STARTED, resume=Events.ITERATION_STARTED,
                  pause=Events.ITERATION_COMPLETED, step=Events.ITERATION_COMPLETED)
 
-    # average metric to attach on trainer
     RunningAverage(output_transform=lambda x: x[0]).attach(trainer, 'avg_loss')
     RunningAverage(output_transform=lambda x: x[1]).attach(trainer, 'avg_acc')
 
@@ -186,7 +151,6 @@ def do_train(
         if len(train_loader) == ITER:
             ITER = 0
 
-    # adding handlers using `trainer.on` decorator API
     @trainer.on(Events.EPOCH_COMPLETED)
     def print_times(engine):
         logger.info('Epoch {} done. Time per batch: {:.3f}[s] Speed: {:.1f}[samples/s]'
@@ -232,7 +196,13 @@ def do_train_with_center(
     logger.info("Start training")
     trainer = create_supervised_trainer_with_center(model, center_criterion, optimizer, optimizer_center, loss_fn, cfg.SOLVER.CENTER_LOSS_WEIGHT, device=device)
     evaluator = create_supervised_evaluator(model, metrics={'r1_mAP': R1_mAP(num_query, max_rank=50, feat_norm=cfg.TEST.FEAT_NORM)}, device=device)
-    checkpointer = ModelCheckpoint(output_dir, cfg.MODEL.NAME, checkpoint_period, n_saved=10, require_empty=False)
+
+    checkpointer = ModelCheckpoint(dirname=output_dir,
+                                   filename_prefix=cfg.MODEL.NAME,
+                                   n_saved=10,
+                                   require_empty=False,
+                                   save_interval=checkpoint_period)
+
     timer = Timer(average=True)
 
     trainer.add_event_handler(Events.EPOCH_COMPLETED, checkpointer, {'model': model,
@@ -243,7 +213,6 @@ def do_train_with_center(
     timer.attach(trainer, start=Events.EPOCH_STARTED, resume=Events.ITERATION_STARTED,
                  pause=Events.ITERATION_COMPLETED, step=Events.ITERATION_COMPLETED)
 
-    # average metric to attach on trainer
     RunningAverage(output_transform=lambda x: x[0]).attach(trainer, 'avg_loss')
     RunningAverage(output_transform=lambda x: x[1]).attach(trainer, 'avg_acc')
 
@@ -268,7 +237,6 @@ def do_train_with_center(
         if len(train_loader) == ITER:
             ITER = 0
 
-    # adding handlers using `trainer.on` decorator API
     @trainer.on(Events.EPOCH_COMPLETED)
     def print_times(engine):
         logger.info('Epoch {} done. Time per batch: {:.3f}[s] Speed: {:.1f}[samples/s]'
