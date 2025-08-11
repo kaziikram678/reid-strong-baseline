@@ -15,7 +15,7 @@ from yacs.config import CfgNode as CN
 # -----------------------------------------------------------------------------
 
 _C = CN()
-
+_C.MODEL = CN()
 # after _C.MODEL is defined
 _C.MODEL.SELF_ATTN = 'none'   # 'none' | 'layer3' | 'layer4' | 'both'
 _C.MODEL.SGCONV    = 'none'   # 'none' | 'layer3' | 'layer4' | 'both'
