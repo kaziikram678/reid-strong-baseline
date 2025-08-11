@@ -20,9 +20,6 @@ _C.MODEL = CN()
 _C.MODEL.SELF_ATTN = 'none'   # 'none' | 'layer3' | 'layer4' | 'both'
 _C.MODEL.SGCONV    = 'none'   # 'none' | 'layer3' | 'layer4' | 'both'
 
-# optional early stop (put under SOLVER)
-_C.SOLVER.EARLY_STOP_PATIENCE = 0
-
 _C.MODEL = CN()
 # Using cuda or cpu for training
 _C.MODEL.DEVICE = "cuda"
@@ -94,6 +91,7 @@ _C.DATALOADER.NUM_INSTANCE = 16
 # Solver
 # ---------------------------------------------------------------------------- #
 _C.SOLVER = CN()
+_C.SOLVER.EARLY_STOP_PATIENCE = 0
 # Name of optimizer
 _C.SOLVER.OPTIMIZER_NAME = "Adam"
 # Number of max epoches
