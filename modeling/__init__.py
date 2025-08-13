@@ -1,10 +1,11 @@
 # modeling/__init__.py
+import os
 from .baseline import Baseline
 
 def build_model(cfg, num_classes):
-    # Read optional toggles (default to 'none' if missing)
-    sa = str(getattr(cfg.MODEL, "SELF_ATTN", "none")).lower()
-    sg = str(getattr(cfg.MODEL, "SGCONV", "none")).lower()
+    # Read from cfg if present, otherwise from env vars, otherwise 'none'
+    sa = str(getattr(getattr(cfg, "MODEL", object()), "SELF_ATTN", os.environ.get("SELF_ATTN", "none"))).lower()
+    sg = str(getattr(getattr(cfg, "MODEL", object()), "SGCONV",    os.environ.get("SGCONV",    "none"))).lower()
 
     use_sa_l3 = sa in ("layer3", "both")
     use_sa_l4 = sa in ("layer4", "both")
