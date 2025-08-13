@@ -1,9 +1,3 @@
-# encoding: utf-8
-"""
-@author:  liaoxingyu
-@contact: sherlockliao01@gmail.com
-"""
-
 import math
 from layers.self_attention import SelfAttention2d
 from layers.sgconv import SGConv2D
@@ -110,6 +104,7 @@ class ResNet(nn.Module):
         self.use_sg_l4 = kwargs.get("use_sg_l4", False)
 
         # stem
+        
         self.conv1 = nn.Conv2d(3, 64, kernel_size=7, stride=2, padding=3, bias=False)
         self.bn1   = nn.BatchNorm2d(64)
         self.relu  = nn.ReLU(inplace=True)          # <- keep this
