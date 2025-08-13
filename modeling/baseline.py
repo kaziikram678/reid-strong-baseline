@@ -1,40 +1,41 @@
-# encoding: utf-8
-"""
-@author:  liaoxingyu
-@contact: sherlockliao01@gmail.com
-"""
-
+import math
 import torch
-from torch import nn
+import torch.nn as nn
 
-from .backbones.resnet import ResNet, BasicBlock, Bottleneck
-from .backbones.senet import SENet, SEResNetBottleneck, SEBottleneck, SEResNeXtBottleneck
+# ✅ use relative imports inside the modeling package
+from .backbones.resnet import ResNet, Bottleneck, BasicBlock
+from .backbones.senet import (
+    SENet, SEResNetBottleneck, SEResNeXtBottleneck, SEBottleneck
+)
 from .backbones.resnet_ibn_a import resnet50_ibn_a
-from modeling.backbones.resnet import ResNet, Bottleneck
 
-from modeling.utils import weights_init_kaiming, weights_init_classifier
+# ---- weight-init helpers (try to import; else define locally) ----
+try:
+    # if your repo has these somewhere else, fix the path here
+    from utils.init_utils import weights_init_kaiming, weights_init_classifier  # example path
+except Exception:
+    def weights_init_kaiming(m):
+        classname = m.__class__.__name__
+        if classname.find('Conv') != -1:
+            nn.init.kaiming_normal_(m.weight.data, a=0, mode='fan_in')
+            if getattr(m, "bias", None) is not None and m.bias is not False:
+                nn.init.constant_(m.bias.data, 0.0)
+        elif classname.find('Linear') != -1:
+            nn.init.kaiming_normal_(m.weight.data, a=0, mode='fan_out')
+            if getattr(m, "bias", None) is not None and m.bias is not False:
+                nn.init.constant_(m.bias.data, 0.0)
+        elif classname.find('BatchNorm') != -1:
+            if m.affine:
+                nn.init.normal_(m.weight.data, 1.0, 0.01)
+                nn.init.constant_(m.bias.data, 0.0)
 
-def weights_init_kaiming(m):
-    classname = m.__class__.__name__
-    if classname.find('Linear') != -1:
-        nn.init.kaiming_normal_(m.weight, a=0, mode='fan_out')
-        nn.init.constant_(m.bias, 0.0)
-    elif classname.find('Conv') != -1:
-        nn.init.kaiming_normal_(m.weight, a=0, mode='fan_in')
-        if m.bias is not None:
-            nn.init.constant_(m.bias, 0.0)
-    elif classname.find('BatchNorm') != -1:
-        if m.affine:
-            nn.init.constant_(m.weight, 1.0)
-            nn.init.constant_(m.bias, 0.0)
+    def weights_init_classifier(m):
+        classname = m.__class__.__name__
+        if classname.find('Linear') != -1:
+            nn.init.normal_(m.weight.data, std=0.001)
+            if getattr(m, "bias", None) is not None and m.bias is not False:
+                nn.init.constant_(m.bias.data, 0.0)
 
-
-def weights_init_classifier(m):
-    classname = m.__class__.__name__
-    if classname.find('Linear') != -1:
-        nn.init.normal_(m.weight, std=0.001)
-        if m.bias:
-            nn.init.constant_(m.bias, 0.0)
 
 
 class Baseline(nn.Module):
