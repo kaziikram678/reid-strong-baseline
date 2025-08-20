@@ -1,30 +1,28 @@
 MODEL:
-  PRETRAIN_CHOICE: 'imagenet'
-  PRETRAIN_PATH: '/home/haoluo/.torch/models/resnet50-19c8e357.pth'
-  METRIC_LOSS_TYPE: 'triplet_center'
-  IF_LABELSMOOTH: 'on'
-  IF_WITH_CENTER: 'yes'
-
-
-
+  PRETRAIN_CHOICE: imagenet
+  PRETRAIN_PATH: models/resnet50-19c8e357.pth   # <- local path you saved earlier
+  METRIC_LOSS_TYPE: triplet_center
+  IF_LABELSMOOTH: True
+  IF_WITH_CENTER: True
 
 INPUT:
   SIZE_TRAIN: [256, 128]
-  SIZE_TEST: [256, 128]
-  PROB: 0.5 # random horizontal flip
-  RE_PROB: 0.5 # random erasing
+  SIZE_TEST:  [256, 128]
+  PROB: 0.5        # random horizontal flip
+  RE_PROB: 0.5     # random erasing
   PADDING: 10
 
 DATASETS:
-  NAMES: ('market1501')
+  NAMES: ["market1501"]          # <- list, not ('market1501')
+  ROOT_DIR: "data"
 
 DATALOADER:
-  SAMPLER: 'softmax_triplet'
+  SAMPLER: softmax_triplet
   NUM_INSTANCE: 4
   NUM_WORKERS: 8
 
 SOLVER:
-  OPTIMIZER_NAME: 'Adam'
+  OPTIMIZER_NAME: Adam
   MAX_EPOCHS: 120
   BASE_LR: 0.00035
 
@@ -49,7 +47,7 @@ SOLVER:
 
   WARMUP_FACTOR: 0.01
   WARMUP_ITERS: 10
-  WARMUP_METHOD: 'linear'
+  WARMUP_METHOD: linear
 
   CHECKPOINT_PERIOD: 40
   LOG_PERIOD: 20
@@ -57,11 +55,9 @@ SOLVER:
 
 TEST:
   IMS_PER_BATCH: 128
-  RE_RANKING: 'no'
-  WEIGHT: "path"
-  NECK_FEAT: 'after'
-  FEAT_NORM: 'yes'
+  RE_RANKING: False              # <- boolean, not 'no'
+  WEIGHT: "path"                 # set to your .pth when evaluating
+  NECK_FEAT: after
+  FEAT_NORM: True
 
-OUTPUT_DIR: "/home/haoluo/log/gu/reid_baseline_review/Opensource_test/market1501/Experiment-all-tricks-tri_center-256x128-bs16x4-warmup10-erase0_5-labelsmooth_on-laststride1-bnneck_on-triplet_centerloss0_0005"
-
-
+OUTPUT_DIR: "logs/custom_market1501/tri_center_run"  # better for Kaggle than a home path
