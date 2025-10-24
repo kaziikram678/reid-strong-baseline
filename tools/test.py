@@ -7,8 +7,7 @@
 import argparse
 import os
 import sys
-from os import mkdir
-
+# from os import mkdir  <--- REMOVED THIS LINE
 import torch
 from torch.backends import cudnn
 
@@ -39,7 +38,10 @@ def main():
 
     output_dir = cfg.OUTPUT_DIR
     if output_dir and not os.path.exists(output_dir):
-        mkdir(output_dir)
+        # --- MODIFIED LINE ---
+        # Use os.makedirs to create all parent directories
+        os.makedirs(output_dir, exist_ok=True)
+        # ---------------------
 
     logger = setup_logger("reid_baseline", output_dir, 0)
     logger.info("Using {} GPUS".format(num_gpus))
@@ -63,5 +65,5 @@ def main():
     inference(cfg, model, val_loader, num_query)
 
 
-if __name__ == '__main__':
+if name == 'main':
     main()
