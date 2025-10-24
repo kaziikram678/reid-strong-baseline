@@ -15,8 +15,8 @@ from .re_ranking import re_ranking
 
 
 class R1_mAP(Metric):
-    def init(self, num_query, max_rank=50, feat_norm='yes', cfg=None): # <-- Pass cfg
-        super(R1_mAP, self).init()
+    def __init__(self, num_query, max_rank=50, feat_norm='yes', cfg=None): # <-- Pass cfg
+        super(R1_mAP, self).__init__()
         self.num_query = num_query
         self.max_rank = max_rank
         self.feat_norm = feat_norm
@@ -76,8 +76,8 @@ class R1_mAP(Metric):
 
 
 class R1_mAP_reranking(Metric):
-    def init(self, num_query, max_rank=50, feat_norm='yes', cfg=None): # <-- Pass cfg
-        super(R1_mAP_reranking, self).init()
+    def __init__(self, num_query, max_rank=50, feat_norm='yes', cfg=None): # <-- Pass cfg
+        super(R1_mAP_reranking, self).__init__()
         self.num_query = num_query
         self.max_rank = max_rank
         self.feat_norm = feat_norm
@@ -109,3 +109,27 @@ class R1_mAP_reranking(Metric):
         gf = feats[self.num_query:]
         g_pids = np.asarray(self.pids[self.num_query:])
         g_camids = np.asarray(self.camids[self.num_query:])
+
+        print("Enter reranking")
+        distmat = re_ranking(qf, gf, k1=20, k2=6, lambda_value=0.3)
+        
+        # --- ADD THIS BLOCK TO SAVE DATA ---
+        if self.cfg is not None:
+            save_path = os.path.join(self.cfg.OUTPUT_DIR, "test_data.npz")
+            try:
+                np.savez(save_path, 
+                         distmat=distmat, 
+                         q_pids=q_pids, 
+                         g_pids=g_pids, 
+                         q_camids=q_camids, 
+                         g_camids=g_camids)
+                self.logger.info(f"Saved reranking test data to {save_path}")
+            except Exception as e:
+                self.logger.warning(f"Could not save reranking test_data.npz: {e}")
+        else:
+            self.logger.warning("CFG object not passed to R1_mAP_reranking, cannot save test_data.npz")
+        # ------------------------------------
+        
+        cmc, mAP = eval_func(distmat, q_pids, g_pids, q_camids, g_camids)
+
+        return cmc, mAP
